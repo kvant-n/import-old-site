@@ -54,7 +54,25 @@ const requiredTypes = [
     fields: {
       both: [
         "id",
+        "oldID",
         "Imports",
+      ],
+      prisma: [
+      ],
+      api: [
+      ],
+    },
+  },
+  {
+    name: "Resource",
+    fields: {
+      both: [
+        "id",
+        "oldID",
+        "published",
+        "deleted",
+        "hidemenu",
+        "searchable",
       ],
       prisma: [
       ],

@@ -1,0 +1,5 @@
+
+type Resource {
+  id: ID! @unique
+  oldID: Int @unique
+}

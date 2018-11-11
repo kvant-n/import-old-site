@@ -18,7 +18,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
   async create(method, args, info) {
 
-    console.log("create args", args);
+    // console.log("create args", args);
 
     // return super.create(method, args, info);
 
@@ -118,15 +118,6 @@ export default class ImportProcessor extends PrismaProcessor {
   }
 
 
-  async processImport(args) {
-
-    await this.initDB(args);
-
-    await this.importUsers();
-
-  }
-
-
   async initDB(args) {
 
     // console.log("initDB args", args);
@@ -142,63 +133,7 @@ export default class ImportProcessor extends PrismaProcessor {
   }
 
 
-  async importUsers() {
-    this.log("Импортируем пользователей", "Info");
-
-    // throw new Error("Test");
-
-    const {
-      source,
-      target,
-      ctx,
-    } = this;
-
-    const targetUsersTable = target.getTableName("User", "targetUser");
-    console.log(chalk.green("targetUsersTable"), targetUsersTable);
-
-
-    const query = source.getQuery("users", "users")
-      .innerJoin(source.getTableName("user_attributes", "profile"), "profile.internalKey", "users.id")
-      .leftJoin(source.getTableName("society_user_attributes"), "society_user_attributes.internalKey", "users.id")
-      .leftJoin(targetUsersTable, "targetUser.oldID", "users.id")
-      ;
-
-    query.whereNull("targetUser.oldID");
-
-    query.limit(1);
-
-    query.select([
-      "users.*",
-      "profile.fullname",
-      "profile.email",
-      "society_user_attributes.createdon as society_user_createdon",
-      "users.createdon as user_createdon",
-    ]);
-
-    // query.whereNotIn("id", [1]);
-
-    console.log(chalk.green("query SQL"), query.toString());
-
-    // return;
-
-    const users = await query.then();
-
-    console.log("users", users);
-
-    await this.log(`Было получено ${users && users.length} пользователей`, "Info");
-
-    const processor = this.getUsersProcessor(users);
-
-    for await (const result of processor) {
-
-      console.log("writeUser result", result);
-
-    }
-
-  }
-
-
-  async * getUsersProcessor(users) {
+  async * getProcessor(users, processor) {
 
     let writed = 0;
     let skiped = 0;
@@ -208,7 +143,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
       const user = users.splice(0, 1)[0];
 
-      const result = await this.writeUser(user)
+      const result = await processor(user)
         .catch(error => {
           errors++;
           this.error(error);
@@ -224,9 +159,79 @@ export default class ImportProcessor extends PrismaProcessor {
       yield result;
     }
 
-    await this.log(`Записано ${writed} пользователей, пропущено ${skiped}, ошибок ${errors}`, "Info");
+    await this.log(`Записано: ${writed}, пропущено: ${skiped}, ошибок: ${errors}`, "Info");
 
   }
+
+
+  async processImport(args) {
+
+    await this.initDB(args);
+
+    // await this.importUsers();
+    await this.importBlogs();
+    // await this.importTopics();
+    // await this.importComments();
+
+  }
+
+  /**
+   * Import Users
+   */
+  async importUsers() {
+
+    this.log("Импортируем пользователей", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+    const targetUsersTable = target.getTableName("User", "targetUser");
+
+
+    const query = source.getQuery("users", "users")
+      .innerJoin(source.getTableName("user_attributes", "profile"), "profile.internalKey", "users.id")
+      .leftJoin(source.getTableName("society_user_attributes"), "society_user_attributes.internalKey", "users.id")
+      .leftJoin(targetUsersTable, "targetUser.oldID", "users.id")
+      ;
+
+    query.whereNull("targetUser.oldID");
+
+    query.select([
+      "users.*",
+      "profile.fullname",
+      "profile.email",
+      "society_user_attributes.createdon as society_user_createdon",
+      "users.createdon as user_createdon",
+    ]);
+
+    query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // return;
+
+    const users = await query.then();
+
+    // console.log("users", users);
+
+    await this.log(`Было получено ${users && users.length} пользователей`, "Info");
+
+    const processor = this.getProcessor(users, this.writeUser.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
 
 
   async writeUser(user) {
@@ -282,15 +287,174 @@ export default class ImportProcessor extends PrismaProcessor {
     await query.update({
       createdAt,
     })
-    .where({
-      id: userId,
-    })
-    .then();
+      .where({
+        id: userId,
+      })
+      .then();
 
-    console.log(chalk.green("update query SQL"), query.toString());
+    // console.log(chalk.green("update query SQL"), query.toString());
 
     return result;
   }
+
+  /**
+   * Eof Import Users
+   */
+
+
+  /**
+   * Import Blogs
+   */
+  async importBlogs() {
+
+    this.log("Импортируем блоги", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+
+    const query = source.getQuery("site_content", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("Resource", "target"), "target.oldID", "source.id")
+      .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      .whereNull("target.id")
+      .whereIn("template", [
+        14,
+        16,
+      ])
+      ;
+
+
+    query.select([
+      "source.*",
+    ]);
+
+    query.limit(1);
+
+
+    console.log(chalk.green("query SQL"), query.toString());
+
+    // return;
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} блогов`, "Info");
+
+    const processor = this.getProcessor(objects, this.writeBlog.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeBlog(object) {
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    const {
+      id,
+      pagetitle: name,
+      createdon,
+      editedon,
+      createdby,
+      uri,
+      template,
+      published,
+      deleted,
+      hidemenu,
+      searchable,
+    } = object;
+
+    let type;
+
+    switch (template) {
+      case 14:
+        type = "Blog";
+        break;
+
+      case 16:
+
+        type = "PersonalBlog";
+        break;
+
+      default: throw new Error(`Wrong template ${template}`);
+    }
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createResource({
+      data: {
+        type,
+        oldID: id,
+        uri,
+        name,
+        published: published === 1,
+        deleted: deleted === 1,
+        hidemenu: hidemenu === 1,
+        searchable: searchable === 1,
+        CreatedBy: {
+          connect: {
+            oldID: createdby,
+          },
+        },
+      },
+    });
+
+    const {
+      id: objectId,
+    } = result;
+
+    /**
+     * Если пользователь был сохранен, надо обновить дату его создания
+     */
+    let createdAt = createdon ? new Date(createdon * 1000) : undefined;
+    let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
+
+
+    const query = target.getQuery("Resource")
+
+    await query.update({
+      createdAt,
+      updatedAt,
+    })
+      .where({
+        id: objectId,
+      })
+      .then();
+
+    // console.log(chalk.green("update query SQL"), query.toString());
+
+    return result;
+  }
+
+  /**
+   * Eof Import Blogs
+   */
+
 
 
   createLog(args) {

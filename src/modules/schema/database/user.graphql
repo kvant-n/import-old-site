@@ -3,7 +3,7 @@ type User {
   id: ID! @unique
   Imports: [Import!]! @relation(name: "UserImports")
   oldID: Int @unique
-  username: String @unique
-  email: String @unique
-  fullname: String
+  # username: String @unique
+  # email: String @unique
+  # fullname: String
 }
