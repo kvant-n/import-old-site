@@ -73,6 +73,8 @@ const requiredTypes = [
         "deleted",
         "hidemenu",
         "searchable",
+        "Topics",
+        "Blog",
       ],
       prisma: [
       ],
