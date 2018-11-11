@@ -118,6 +118,26 @@ export default class ImportProcessor extends PrismaProcessor {
   }
 
 
+  createLog(args) {
+
+    const {
+      id: importId,
+    } = this.Import || {};
+
+    if (importId) {
+      Object.assign(args.data, {
+        Import: {
+          connect: {
+            id: importId,
+          },
+        },
+      });
+    }
+
+    return super.createLog(args);
+  }
+
+
   async initDB(args) {
 
     // console.log("initDB args", args);
@@ -169,8 +189,8 @@ export default class ImportProcessor extends PrismaProcessor {
     await this.initDB(args);
 
     // await this.importUsers();
-    await this.importBlogs();
-    // await this.importTopics();
+    // await this.importBlogs();
+    await this.importTopics();
     // await this.importComments();
 
   }
@@ -456,26 +476,161 @@ export default class ImportProcessor extends PrismaProcessor {
    */
 
 
+  /**
+   * Import Topics
+   */
+  async importTopics() {
 
-  createLog(args) {
+    this.log("Импортируем топики", "Info");
+
+    // throw new Error("Test");
 
     const {
-      id: importId,
-    } = this.Import || {};
+      source,
+      target,
+      ctx,
+    } = this;
 
-    if (importId) {
-      Object.assign(args.data, {
-        Import: {
-          connect: {
-            id: importId,
-          },
-        },
-      });
+
+
+    const query = source.getQuery("site_content", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("Resource", "target"), "target.oldID", "source.id")
+      .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      .whereNull("target.id")
+      .whereIn("template", [
+        15,
+      ])
+      ;
+
+    query
+      .leftJoin(source.getTableName("society_blog_topic", "blog_topic"), "blog_topic.topicid", "source.id")
+
+    query
+      .leftJoin(target.getTableName("Resource", "Blog"), "Blog.oldID", "blog_topic.blogid")
+
+
+    query.select([
+      "source.*",
+      "Blog.id as blogId",
+    ]);
+
+    query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} топиков`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeTopic.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
     }
 
-    return super.createLog(args);
-
   }
+
+
+  async writeTopic(object) {
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    const {
+      id,
+      pagetitle: name,
+      createdon,
+      editedon,
+      createdby,
+      uri,
+      template,
+      published,
+      deleted,
+      hidemenu,
+      searchable,
+      blogId,
+    } = object;
+
+    let type = "Topic";
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createResource({
+      data: {
+        type,
+        oldID: id,
+        uri,
+        name,
+        published: published === 1,
+        deleted: deleted === 1,
+        hidemenu: hidemenu === 1,
+        searchable: searchable === 1,
+        CreatedBy: {
+          connect: {
+            oldID: createdby,
+          },
+        },
+        Blog: blogId ? {
+          connect: {
+            id: blogId,
+          },
+        } : undefined,
+      },
+    });
+
+    const {
+      id: objectId,
+    } = result;
+
+    /**
+     * Если пользователь был сохранен, надо обновить дату его создания
+     */
+    let createdAt = createdon ? new Date(createdon * 1000) : undefined;
+    let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
+
+
+    const query = target.getQuery("Resource")
+
+    await query.update({
+      createdAt,
+      updatedAt,
+    })
+      .where({
+        id: objectId,
+      })
+      .then();
+
+    // console.log(chalk.green("update query SQL"), query.toString());
+
+    return result;
+  }
+
+  /**
+   * Eof Import Topics
+   */
+
+
+
 
 }
 
