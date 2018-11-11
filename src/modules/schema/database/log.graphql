@@ -1,0 +1,5 @@
+
+type Log {
+  id: ID! @unique
+  Import: Import @relation (name: "ImportLogs")
+}

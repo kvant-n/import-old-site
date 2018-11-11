@@ -3,6 +3,10 @@ import fs from "fs";
 
 import chalk from "chalk";
 
+import ImportProcessor from "./processor";
+
+import LogModule from "@prisma-cms/log-module";
+
 import PrismaModule from "@prisma-cms/prisma-module";
 
 import MergeSchema from 'merge-graphql-schemas';
@@ -17,6 +21,9 @@ const { createWriteStream, unlinkSync } = fs;
 
 const { fileLoader, mergeTypes } = MergeSchema
 
+export {
+  ImportProcessor,
+}
 
 
 class Module extends PrismaModule {
@@ -26,8 +33,9 @@ class Module extends PrismaModule {
 
     super(props);
 
-    Object.assign(this, {
-    });
+    this.mergeModules([
+      LogModule,
+    ]);
 
   }
 
@@ -82,19 +90,72 @@ class Module extends PrismaModule {
     const resolvers = super.getResolvers();
 
 
-    Object.assign(resolvers.Query, this.Query);
+    Object.assign(resolvers.Query, {
+      importsConnection: this.importsConnection,
+      imports: this.imports,
+      import: this.import,
+    });
 
-    Object.assign(resolvers.Mutation, this.Mutation);
+    Object.assign(resolvers.Mutation, {
+      startImportProcessor: this.startImportProcessor.bind(this),
+    });
 
-    Object.assign(resolvers.Subscription, this.Subscription);
+    // Object.assign(resolvers.Subscription, this.Subscription);
 
 
     Object.assign(resolvers, {
+      ImportResponse: this.ImportResponse(),
     });
 
     return resolvers;
   }
 
+
+  import(source, args, ctx, info) {
+    return ctx.db.query.import({}, info);
+  }
+
+  imports(source, args, ctx, info) {
+    return ctx.db.query.imports({}, info);
+  }
+
+  importsConnection(source, args, ctx, info) {
+    return ctx.db.query.importsConnection({}, info);
+  }
+
+
+  startImportProcessor(source, args, ctx, info) {
+
+    return this.getProcessor(ctx).createWithResponse("Import", args, info);
+  }
+
+
+  getProcessor(ctx) {
+    return new (this.getProcessorClass())(ctx);
+  }
+
+  getProcessorClass() {
+    return ImportProcessor;
+  }
+
+
+  ImportResponse() {
+
+    return {
+      data: (source, args, ctx, info) => {
+
+        const {
+          id,
+        } = source.data || {};
+
+        return id ? ctx.db.query.import({
+          where: {
+            id,
+          },
+        }, info) : null;
+      }
+    }
+  }
 
 }
 

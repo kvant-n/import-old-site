@@ -1,0 +1,30 @@
+
+type Mutation{
+  startImportProcessor(
+    sourceDbConfig: ImportDbConfig!
+    targetDbConfig: ImportDbConfig!
+  ): ImportResponse!
+}
+
+
+type Error {
+  key: String!
+  message: String!
+}
+
+
+type ImportResponse{
+  success: Boolean!
+  message: String
+  errors: [Error!]!
+  data: Import
+}
+
+
+input ImportDbConfig {
+  host: String = "localhost"
+  user: String = "root"
+  database: String!
+  password: String
+  tablePrefix: String
+}

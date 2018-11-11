@@ -1,0 +1,18 @@
+
+enum ImportStatus {
+  Created
+  Started
+  Error
+  Completed
+  Stoped
+}
+
+type Import {
+  id: ID! @unique
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  name: String!
+  status: ImportStatus! @default (value: Created)
+  Logs: [Log!]! @relation (name: "ImportLogs")
+  CreatedBy: User @relation(name: "UserImports")
+}
