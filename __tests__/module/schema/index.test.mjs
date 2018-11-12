@@ -54,6 +54,7 @@ const requiredTypes = [
     fields: {
       both: [
         "id",
+        "image",
         "oldID",
         "Imports",
       ],
@@ -75,6 +76,8 @@ const requiredTypes = [
         "searchable",
         "Topics",
         "Blog",
+        "class_key",
+        "template",
       ],
       prisma: [
       ],

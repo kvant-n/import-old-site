@@ -2,7 +2,49 @@
 import chalk from "chalk";
 import PrismaProcessor from "@prisma-cms/prisma-processor";
 
+import Knex from "knex";
+
 import MySQL from "./mysql";
+
+import {
+  ResourceProcessor,
+} from "@prisma-cms/resource-module";
+
+import React from "react";
+import Draft from "draft-js";
+
+
+import jsdom from 'jsdom';
+
+const { JSDOM } = jsdom;
+
+
+const w = (new JSDOM(`<!DOCTYPE html>`)).window;
+
+const {
+  document,
+  HTMLElement,
+  HTMLAnchorElement,
+  HTMLImageElement,
+} = w;
+
+global.document = document;
+global.HTMLElement = HTMLElement;
+global.HTMLAnchorElement = HTMLAnchorElement;
+global.HTMLImageElement = HTMLImageElement;
+
+
+const {
+  // CompositeDecorator,
+  // ContentBlock,
+  ContentState,
+  // Editor,
+  // EditorState,
+  convertFromHTML,
+  convertToRaw,
+  // convertFromRaw,
+} = Draft;
+
 
 export default class ImportProcessor extends PrismaProcessor {
 
@@ -12,6 +54,11 @@ export default class ImportProcessor extends PrismaProcessor {
     super(props);
 
     this.objectType = "Import";
+
+    /**
+     * Если выставлен флаг, то выполнение завершается
+     */
+    // this.stopped = false;
 
   }
 
@@ -23,9 +70,28 @@ export default class ImportProcessor extends PrismaProcessor {
     // return super.create(method, args, info);
 
     const {
+      ctx,
+    } = this;
+
+
+    const {
+      response: res,
+    } = ctx;
+
+    /**
+     * Устанавливаем лимит на время запроса, иначе будет обрываться на 120 сек.
+     */
+    res && res.setTimeout(3600 * 1000, () => {
+      console.error('Request has timed out.');
+      // response.status(500);
+      res.writeHead(408, 'Request Timeout');
+      res.end('Timeout!')
+    });
+
+    const {
       currentUser,
       db,
-    } = this.ctx;
+    } = ctx;
 
 
 
@@ -118,6 +184,17 @@ export default class ImportProcessor extends PrismaProcessor {
   }
 
 
+  // async log(options, level = "Info") {
+
+  //   await super.log(options, level = "Info");
+
+  //   if(["Error", "Fatal"].indexOf(level) !== -1){
+  //     throw new Error("Импорт завершился с ошибкой");
+  //   }
+
+  // }
+
+
   createLog(args) {
 
     const {
@@ -167,7 +244,12 @@ export default class ImportProcessor extends PrismaProcessor {
         .catch(error => {
           errors++;
           this.error(error);
+          return error;
         });
+
+      if (result instanceof Error) {
+        return;
+      }
 
       if (result) {
         writed++;
@@ -181,6 +263,10 @@ export default class ImportProcessor extends PrismaProcessor {
 
     await this.log(`Записано: ${writed}, пропущено: ${skiped}, ошибок: ${errors}`, "Info");
 
+    if (errors) {
+      throw new Error("Есть ошибки при импорте");
+    }
+
   }
 
 
@@ -188,10 +274,12 @@ export default class ImportProcessor extends PrismaProcessor {
 
     await this.initDB(args);
 
-    // await this.importUsers();
-    // await this.importBlogs();
+    await this.importUsers();
+    await this.importBlogs();
     await this.importTopics();
-    // await this.importComments();
+    await this.importComments();
+    // await this.importTags();
+    // await this.importVotes();
 
   }
 
@@ -229,7 +317,7 @@ export default class ImportProcessor extends PrismaProcessor {
       "users.createdon as user_createdon",
     ]);
 
-    query.limit(1);
+    // query.limit(1);
 
 
     // console.log(chalk.green("query SQL"), query.toString());
@@ -346,7 +434,7 @@ export default class ImportProcessor extends PrismaProcessor {
       .leftJoin(target.getTableName("Resource", "target"), "target.oldID", "source.id")
       .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
       .whereNull("target.id")
-      .whereIn("template", [
+      .whereIn("source.template", [
         14,
         16,
       ])
@@ -357,10 +445,10 @@ export default class ImportProcessor extends PrismaProcessor {
       "source.*",
     ]);
 
-    query.limit(1);
+    // query.limit(1);
 
 
-    console.log(chalk.green("query SQL"), query.toString());
+    // console.log(chalk.green("query SQL"), query.toString());
 
     // return;
 
@@ -401,11 +489,13 @@ export default class ImportProcessor extends PrismaProcessor {
       editedon,
       createdby,
       uri,
-      template,
       published,
       deleted,
       hidemenu,
       searchable,
+      content: text,
+      class_key,
+      template,
     } = object;
 
     let type;
@@ -423,6 +513,11 @@ export default class ImportProcessor extends PrismaProcessor {
       default: throw new Error(`Wrong template ${template}`);
     }
 
+    let {
+      content,
+      contentText,
+    } = this.getContent(text) || {};
+
     /**
      * Сохраняем объект
      */
@@ -432,6 +527,10 @@ export default class ImportProcessor extends PrismaProcessor {
         oldID: id,
         uri,
         name,
+        class_key,
+        template,
+        content,
+        contentText,
         published: published === 1,
         deleted: deleted === 1,
         hidemenu: hidemenu === 1,
@@ -500,16 +599,16 @@ export default class ImportProcessor extends PrismaProcessor {
       .leftJoin(target.getTableName("Resource", "target"), "target.oldID", "source.id")
       .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
       .whereNull("target.id")
-      .whereIn("template", [
+      .whereIn("source.template", [
         15,
       ])
       ;
 
     query
-      .leftJoin(source.getTableName("society_blog_topic", "blog_topic"), "blog_topic.topicid", "source.id")
+      .innerJoin(source.getTableName("society_blog_topic", "blog_topic"), "blog_topic.topicid", "source.id")
 
     query
-      .leftJoin(target.getTableName("Resource", "Blog"), "Blog.oldID", "blog_topic.blogid")
+      .innerJoin(target.getTableName("Resource", "Blog"), "Blog.oldID", "blog_topic.blogid")
 
 
     query.select([
@@ -517,11 +616,12 @@ export default class ImportProcessor extends PrismaProcessor {
       "Blog.id as blogId",
     ]);
 
-    query.limit(1);
+    // query.limit(2);
 
 
     // console.log(chalk.green("query SQL"), query.toString());
 
+    // throw new Error ("Topic error test");
 
     const objects = await query.then();
 
@@ -544,6 +644,8 @@ export default class ImportProcessor extends PrismaProcessor {
 
   async writeTopic(object) {
 
+    // throw new Error("writeTopic error test");
+
     const {
       ctx,
       target,
@@ -562,15 +664,22 @@ export default class ImportProcessor extends PrismaProcessor {
       editedon,
       createdby,
       uri,
-      template,
       published,
       deleted,
       hidemenu,
       searchable,
       blogId,
+      content: text,
+      class_key,
+      template,
     } = object;
 
     let type = "Topic";
+
+    let {
+      content,
+      contentText,
+    } = this.getContent(text) || {};
 
     /**
      * Сохраняем объект
@@ -579,8 +688,12 @@ export default class ImportProcessor extends PrismaProcessor {
       data: {
         type,
         oldID: id,
+        class_key,
+        template,
         uri,
         name,
+        content,
+        contentText,
         published: published === 1,
         deleted: deleted === 1,
         hidemenu: hidemenu === 1,
@@ -627,6 +740,341 @@ export default class ImportProcessor extends PrismaProcessor {
 
   /**
    * Eof Import Topics
+   */
+
+
+  /**
+   * Import Comments
+   */
+  async importComments() {
+
+    this.log("Импортируем комментарии", "Info");
+
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("society_comments", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("Resource", "target"), "target.oldID", "source.id")
+      .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      .whereNull("target.id")
+      // .whereIn("template", [
+      //   15,
+      // ])
+      ;
+
+    query
+      .innerJoin(source.getTableName("society_threads", "threads"), "threads.id", "source.thread_id")
+
+    query
+      .innerJoin(target.getTableName("Resource", "Topic"), "Topic.oldID", "threads.target_id")
+
+    query
+      .leftJoin(target.getTableName("Resource", "Parent"), "Parent.oldID", "source.parent")
+
+
+    query.select([
+      "source.*",
+      "target_id as topicId",
+      "Topic.name as topicName",
+      "Parent.id as parentId",
+      knex.raw("unix_timestamp(source.createdon) as createdon"),
+      knex.raw("unix_timestamp(source.editedon) as editedon"),
+    ]);
+
+    query.orderBy("source.id");
+
+    // query.limit(2);
+
+    // throw new Error("Comments error test");
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} комментариев`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeComment.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeComment(object) {
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    const {
+      id,
+      // pagetitle: name,
+      createdon,
+      editedon,
+      createdby,
+      // uri,
+      // template,
+      published,
+      deleted,
+      // hidemenu,
+      // searchable,
+      topicId,
+      parentId,
+      text,
+      topicName,
+      class_key,
+      template,
+    } = object;
+
+    let type = "Comment";
+
+    const uri = `/comments/comment-${id}.html`;
+
+    let {
+      content,
+      contentText,
+    } = this.getContent(text) || {};
+
+    // console.log(chalk.green("content"), content);
+    // console.log(chalk.green("contentText"), contentText);
+
+    let name = contentText && contentText.substr(0, 50) || `Комментарий к топику ${topicName}`;
+
+    // console.log(chalk.green("name"), name);
+
+    // return;
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createResource({
+      data: {
+        type,
+        oldID: id,
+        class_key,
+        template,
+        uri,
+        name,
+        content,
+        contentText,
+        published: published === 1,
+        deleted: deleted === 1,
+        // hidemenu: hidemenu === 1,
+        // searchable: searchable === 1,
+        CreatedBy: {
+          connect: {
+            oldID: createdby,
+          },
+        },
+        CommentTarget: {
+          connect: {
+            oldID: topicId,
+          },
+        },
+        Parent: parentId ? {
+          connect: {
+            id: parentId,
+          },
+        } : undefined,
+      },
+    });
+
+    const {
+      id: objectId,
+    } = result;
+
+    /**
+     * Если пользователь был сохранен, надо обновить дату его создания
+     */
+    let createdAt = createdon ? new Date(createdon * 1000) : undefined;
+    let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
+
+
+    const query = target.getQuery("Resource")
+
+    await query.update({
+      createdAt,
+      updatedAt,
+    })
+      .where({
+        id: objectId,
+      })
+      .then();
+
+    // console.log(chalk.green("update query SQL"), query.toString());
+
+    return result;
+  }
+
+
+  getContent(text) {
+
+    // console.log(chalk.green("text"), text);
+
+    let preparedContent;
+
+    let content;
+
+    let blocks;
+    // let editorState;
+
+    // throw new Error ("sdfsdf");
+
+    // return;
+
+    text = text && text.trim();
+
+    if (text) {
+
+      /**
+       * Сначала пытаемся сконвертировать в объект, так как это может быть готовый контент
+       */
+      try {
+        content = JSON.parse(text);
+
+        // Если данные нормально парсятся, значит это контент 
+
+      }
+      catch (error) {
+
+      }
+
+
+      /**
+       * Проверяем полученный контент.
+       * Если не был получен контент или контент - число,
+       * то создаем новый стейт
+       */
+      if (!content || typeof content === "number") {
+
+        // Иначе конвертируем с исходного текста
+        try {
+          blocks = convertFromHTML(text, this.serverDOMBuilder);
+        }
+        catch (error) {
+
+          console.error(chalk.red("convertFromHTML error"), error);
+          console.error(chalk.red("convertFromHTML text"), text);
+
+          throw error;
+        }
+        // console.log(chalk.green("blocks"), blocks);
+
+        // Если блоки были получены, то создаем стейт контента
+
+        if (blocks) {
+
+          /**
+           * Из полученных блоков создаем контент-стейт
+           */
+
+          let editorState;
+
+          try {
+            editorState = ContentState.createFromBlockArray(blocks);
+          }
+          catch (error) {
+            console.error(chalk.red("editorState error"), error);
+            console.error(chalk.red("editorState text"), text);
+            console.error(chalk.red("editorState blocks"), blocks);
+          }
+
+          try {
+            // конвертируем стейт в сырые данные для записи
+            content = convertToRaw(editorState);
+          }
+          catch (error) {
+            console.error(chalk.red("convertToRaw error"), error);
+            console.error(chalk.red("convertToRaw text"), text);
+            console.error(chalk.red("convertToRaw editorState"), editorState);
+          }
+
+          /**
+           * Если контент не был получен, возвращаем пусто
+           */
+          if(!content){
+            
+            return;
+          }
+
+        }
+        else {
+          console.error(chalk.red("Не были получены блоки контента"), text);
+          throw new Error("Не были получены блоки контента");
+        }
+
+      }
+
+
+      if (content) {
+
+        const resourceProcessor = new ResourceProcessor(this.ctx);
+
+        preparedContent = resourceProcessor.prepareContent({
+          data: {
+            content,
+          },
+        }, {});
+
+        // console.log(chalk.green("preparedContent"), preparedContent);
+
+        if (!preparedContent) {
+          throw new Error("Не был получен контент");
+        }
+
+      }
+      else {
+        throw new Error("Не был получен контент");
+      }
+
+      /**
+       * Если контент был получен, выдергиваем сырой текст
+       */
+
+    }
+
+
+    return preparedContent;
+  }
+
+  serverDOMBuilder(html) {
+
+    const doc = document.implementation.createHTMLDocument('div');
+
+    doc.documentElement.innerHTML = html;
+
+    const root = doc.getElementsByTagName('body')[0];
+
+    return root;
+  }
+
+  /**
+   * Eof Import Comments
    */
 
 

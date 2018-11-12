@@ -4,4 +4,9 @@ type Resource {
   oldID: Int @unique
   Topics: [Resource!]! @relation(name: "BlogTopics")
   Blog: Resource @relation(name: "BlogTopics")
+
+  """Будет удалено"""
+  class_key: String
+  """Будет удалено"""
+  template: Int
 }

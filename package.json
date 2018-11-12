@@ -18,9 +18,13 @@
     "@prisma-cms/prisma-module": "latest",
     "@prisma-cms/prisma-processor": "latest",
     "chalk": "^2.4.1",
+    "draft-js": "^0.10.5",
+    "jsdom": "^13.0.0",
     "knex": "^0.15.2",
     "merge-graphql-schemas": "latest",
-    "mysql": "^2.16.0"
+    "mysql": "^2.16.0",
+    "react": "^16.6.1",
+    "react-dom": "^16.6.1"
   },
   "devDependencies": {
     "@prisma-cms/server": "latest",
