@@ -46,5 +46,13 @@
     "server",
     "boilerplate",
     "modxclub.ru"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MODX-Club/import-old-site.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MODX-Club/import-old-site/issues"
+  },
+  "homepage": "https://github.com/MODX-Club/import-old-site#readme"
 }

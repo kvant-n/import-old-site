@@ -278,6 +278,7 @@ export default class ImportProcessor extends PrismaProcessor {
     await this.importBlogs();
     await this.importTopics();
     await this.importComments();
+    
     // await this.importTags();
     // await this.importVotes();
 
@@ -313,6 +314,7 @@ export default class ImportProcessor extends PrismaProcessor {
       "users.*",
       "profile.fullname",
       "profile.email",
+      "profile.photo as image",
       "society_user_attributes.createdon as society_user_createdon",
       "users.createdon as user_createdon",
     ]);
@@ -365,6 +367,7 @@ export default class ImportProcessor extends PrismaProcessor {
       email,
       society_user_createdon,
       user_createdon,
+      image,
     } = user;
 
     /**
@@ -376,6 +379,7 @@ export default class ImportProcessor extends PrismaProcessor {
         username,
         fullname,
         email,
+        image,
       },
     });
 
@@ -392,13 +396,18 @@ export default class ImportProcessor extends PrismaProcessor {
 
     const query = target.getQuery("User", "users")
 
-    await query.update({
-      createdAt,
-    })
-      .where({
-        id: userId,
+    if (createdAt) {
+
+      await query.update({
+        createdAt,
       })
-      .then();
+        .where({
+          id: userId,
+        })
+        .then();
+
+    }
+
 
     // console.log(chalk.green("update query SQL"), query.toString());
 
@@ -1017,8 +1026,8 @@ export default class ImportProcessor extends PrismaProcessor {
           /**
            * Если контент не был получен, возвращаем пусто
            */
-          if(!content){
-            
+          if (!content) {
+
             return;
           }
 
