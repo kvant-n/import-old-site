@@ -491,7 +491,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     let result;
 
-    const {
+    let {
       id,
       pagetitle: name,
       createdon,
@@ -526,6 +526,8 @@ export default class ImportProcessor extends PrismaProcessor {
       content,
       contentText,
     } = this.getContent(text) || {};
+
+    uri = this.prepareUri(uri);
 
     /**
      * Сохраняем объект
@@ -666,7 +668,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     let result;
 
-    const {
+    let {
       id,
       pagetitle: name,
       createdon,
@@ -689,6 +691,8 @@ export default class ImportProcessor extends PrismaProcessor {
       content,
       contentText,
     } = this.getContent(text) || {};
+
+    uri = this.prepareUri(uri);
 
     /**
      * Сохраняем объект
@@ -793,6 +797,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     query.select([
       "source.*",
+      "source.id as oldID",
       "target_id as topicId",
       "Topic.name as topicName",
       "Parent.id as parentId",
@@ -841,8 +846,9 @@ export default class ImportProcessor extends PrismaProcessor {
 
     let result;
 
-    const {
+    let {
       id,
+      oldID,
       // pagetitle: name,
       createdon,
       editedon,
@@ -863,7 +869,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     let type = "Comment";
 
-    const uri = `/comments/comment-${id}.html`;
+    const uri = `/comments/comment-${oldID}.html`;
 
     let {
       content,
@@ -1080,6 +1086,19 @@ export default class ImportProcessor extends PrismaProcessor {
     const root = doc.getElementsByTagName('body')[0];
 
     return root;
+  }
+
+  prepareUri(uri){
+
+    if(!uri){
+      throw new Error("uri is empty");
+    }
+    
+    if(!uri.startsWith("/")){
+      uri = `/${uri}`;
+    }
+ 
+    return uri;
   }
 
   /**
