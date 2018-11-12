@@ -1,7 +1,7 @@
 {
   "name": "@modxclub/import-old-site",
   "description": "Importer for modxclub.ru",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "src/",
   "files": [
     "src"

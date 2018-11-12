@@ -278,8 +278,8 @@ export default class ImportProcessor extends PrismaProcessor {
     await this.importBlogs();
     await this.importTopics();
     await this.importComments();
-    
-    // await this.importTags();
+    await this.importTags();
+
     // await this.importVotes();
 
   }
@@ -1084,6 +1084,160 @@ export default class ImportProcessor extends PrismaProcessor {
 
   /**
    * Eof Import Comments
+   */
+
+
+  /**
+   * Import Tags
+   */
+  async importTags() {
+
+    this.log("Импортируем теги", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+    const sessionQuery = knex.raw(`SET SESSION group_concat_max_len = 10000000;`);
+
+    await sessionQuery.then();
+
+    // console.log(chalk.green("sessionQuery SQL"), sessionQuery.toString());
+    // return;
+
+    // const query = source.getQuery("society_topic_tags", "source")
+    //   ;
+
+    // // let query = knex(source.getTableName("society_topic_tags", "tags"))
+    // query
+    //   .groupBy("tag");
+
+    // query
+    //   // .count("* as count")
+    //   .select(knex.raw("GROUP_CONCAT(topic_id) as topic_ids"))
+    //   .select("source.tag as name")
+    //   // .where("source.active", 1)
+    //   ;
+
+
+
+    let tagsQuery = knex(source.getTableName("society_topic_tags", "tags"))
+      .innerJoin(source.getTableName("site_content", "topic"), "topic.id", "tags.topic_id")
+      // .count("* as count")
+      .select(knex.raw("GROUP_CONCAT(topic_id) as topic_ids"))
+      .select("tags.tag as name")
+      // .where("tags.active", 1)
+      .groupBy("tag")
+      .as("source")
+      ;
+
+    let query = knex.from(tagsQuery)
+    // .whereRaw(`tag.topic_id = topics.id`);
+
+    query
+      .leftJoin(target.getTableName("Tag", "target"), "target.name", "source.name")
+      ;
+
+    query.whereNull("target.id");
+
+    query.select([
+      "source.name",
+      "source.topic_ids",
+    ]);
+
+    // query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} тегов`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeTag.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeTag(object) {
+    
+    // console.log(chalk.green("Create tag object"), object);
+    // throw new Error("writeTopic error test");
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    const {
+      topic_ids,
+      name,
+    } = object;
+
+    let resourcesIds = topic_ids && topic_ids.split(",").map(n => parseInt(n)) || [];
+
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createTag({
+      data: {
+        name,
+        CreatedBy: {
+          connect: {
+            username: "Fi1osof",
+          },
+        },
+        Resources: resourcesIds && resourcesIds.length ? {
+          create: resourcesIds.map(oldID => {
+            return {
+              Resource: {
+                connect: {
+                  oldID,
+                },
+              },
+              CreatedBy: {
+                connect: {
+                  username: "Fi1osof",
+                },
+              },
+            }
+          }),
+        } : undefined,
+      },
+    });
+
+
+    return result;
+  }
+
+  /**
+   * Eof Import Tags
    */
 
 

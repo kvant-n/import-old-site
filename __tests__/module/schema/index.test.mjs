@@ -76,6 +76,7 @@ const requiredTypes = [
         "searchable",
         "Topics",
         "Blog",
+        "Tags",
         "class_key",
         "template",
       ],
