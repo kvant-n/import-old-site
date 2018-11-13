@@ -1,0 +1,5 @@
+
+type NotificationType{
+  id: ID! @unique
+  oldID: Int @unique
+}

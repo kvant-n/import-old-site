@@ -57,6 +57,10 @@ const requiredTypes = [
         "image",
         "oldID",
         "Imports",
+        "Votes",
+        "NotificationTypes",
+        "Tags",
+        "ResourceTags",
       ],
       prisma: [
       ],
@@ -79,6 +83,20 @@ const requiredTypes = [
         "Tags",
         "class_key",
         "template",
+      ],
+      prisma: [
+      ],
+      api: [
+      ],
+    },
+  },
+  {
+    name: "NotificationType",
+    fields: {
+      both: [
+        "id",
+        "oldID",
+        "CreatedBy",
       ],
       prisma: [
       ],

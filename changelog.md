@@ -1,3 +1,7 @@
+1.2.4
+===============================
+- Added importNotificationTypes
+
 1.2.3
 ===============================
 - Fix dependencies

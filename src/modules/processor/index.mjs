@@ -279,6 +279,7 @@ export default class ImportProcessor extends PrismaProcessor {
     await this.importTopics();
     await this.importComments();
     await this.importTags();
+    await this.importNotificationTypes();
 
     // await this.importVotes();
 
@@ -1088,16 +1089,16 @@ export default class ImportProcessor extends PrismaProcessor {
     return root;
   }
 
-  prepareUri(uri){
+  prepareUri(uri) {
 
-    if(!uri){
+    if (!uri) {
       throw new Error("uri is empty");
     }
-    
-    if(!uri.startsWith("/")){
+
+    if (!uri.startsWith("/")) {
       uri = `/${uri}`;
     }
- 
+
     return uri;
   }
 
@@ -1198,7 +1199,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
 
   async writeTag(object) {
-    
+
     // console.log(chalk.green("Create tag object"), object);
     // throw new Error("writeTopic error test");
 
@@ -1257,6 +1258,152 @@ export default class ImportProcessor extends PrismaProcessor {
 
   /**
    * Eof Import Tags
+   */
+
+
+  /**
+   * Import NotificationTypes
+   */
+  async importNotificationTypes() {
+
+    this.log("Импортируем типы уведомлений", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("society_notice_types", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("NotificationType", "target"), "target.oldID", "source.id")
+      // .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      .whereNull("target.id")
+      // .whereIn("template", [
+      //   15,
+      // ])
+      ;
+
+    query
+      .select([
+        "source.*",
+      ]);
+
+
+    // query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} типов уведомлений`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeNotificationType.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeNotificationType(object) {
+
+    // console.log(chalk.green("writeNotificationType object"), object);
+    // throw new Error("writeTopic error test");
+
+    const {
+      ctx,
+      source,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    const {
+      id: oldID,
+      type: name,
+      comment,
+    } = object;
+
+
+    // Получаем пользователей с этим уведомлением
+
+
+    const query = source.getQuery("society_notice_users", "source")
+      ;
+
+    query
+      .innerJoin(target.getTableName("User"), "User.oldID", "source.user_id")
+      .where("notice_id", oldID)
+      ;
+
+    query.select([
+      "User.id as userId",
+    ]);
+
+    // query.limit(3);
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+
+    const users = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${users && users.length} пользователей-уведомлений`, "Info");
+
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createNotificationType({
+      data: {
+        oldID,
+        name,
+        comment,
+        CreatedBy: {
+          connect: {
+            username: "Fi1osof",
+          },
+        },
+        Users: users && users.length ? {
+          connect: users.map(({ userId }) => {
+            return {
+              id: userId,
+            }
+          }),
+        } : undefined,
+      },
+    });
+
+
+    return result;
+  }
+
+  /**
+   * Eof Import NotificationTypes
    */
 
 
