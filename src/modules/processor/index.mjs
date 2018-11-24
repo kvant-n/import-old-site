@@ -288,9 +288,9 @@ export default class ImportProcessor extends PrismaProcessor {
     // await this.importTags();
     // await this.importNotificationTypes();
 
-    await this.importTeams();
+    // await this.importTeams();
     // await this.importServices();
-    // await this.importProjects();
+    await this.importProjects();
 
     // await this.importVotes();
 
@@ -1553,7 +1553,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     website = website && website.trim() || null;
 
-    if(website && !website.match(/^http.*?:\/\//)){
+    if (website && !website.match(/^http.*?:\/\//)) {
       website = `http://${website}`;
     }
 
@@ -1844,14 +1844,31 @@ export default class ImportProcessor extends PrismaProcessor {
           .on(knex.raw(`tv_image.value > ''`))
           ;
       })
+      .leftJoin(source.getTableName("site_tmplvar_contentvalues", "tv_developer"), function () {
+        this
+          .on("tv_developer.tmplvarid", 11)
+          .on("tv_developer.contentid", "source.id")
+          .on(knex.raw(`tv_developer.value > ''`))
+          ;
+      })
+      .leftJoin(source.getTableName("modxsite_companies", "companies"), {
+        "companies.resource_id": "tv_developer.value",
+      })
+      .leftJoin(target.getTableName("Team", "team"), {
+        "team.oldID": "companies.id",
+        // "target.template": 29,
+      })
       .where("source.parent", 1443)
       .whereNull("target.id")
+      // .whereNotNull("tv_developer.id")
+      // .whereNotNull("team.id")
       ;
 
     query.select([
       "source.*",
       "User.id as createdById",
       "tv_image.value as image",
+      "team.id as teamId",
     ]);
 
     // query.limit(1);
@@ -1909,6 +1926,7 @@ export default class ImportProcessor extends PrismaProcessor {
       class_key,
       template,
       image,
+      teamId,
     } = object;
 
     let type = "Project";
@@ -1991,7 +2009,7 @@ export default class ImportProcessor extends PrismaProcessor {
         } = n;
 
         return {
-          status: status === 1 ? "Active" : "Invited",
+          status: status === 1 || status === undefined ? "Active" : "Invited",
           User: {
             connect: {
               oldID: user_id,
@@ -2083,6 +2101,11 @@ export default class ImportProcessor extends PrismaProcessor {
           },
         },
         Members,
+        Team: teamId ? {
+          connect: {
+            id: teamId,
+          },
+        } : undefined,
       },
     });
 
