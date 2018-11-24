@@ -6,6 +6,7 @@ type Resource {
   Blog: Resource @relation(name: "BlogTopics")
   Service: Service @relation(name: "ServiceResource")
   Project: Project @relation(name: "ProjectResource")
+  Team: Team @relation(name: "TeamResource")
 
   """Будет удалено"""
   class_key: String

@@ -288,8 +288,9 @@ export default class ImportProcessor extends PrismaProcessor {
     // await this.importTags();
     // await this.importNotificationTypes();
 
+    await this.importTeams();
     // await this.importServices();
-    await this.importProjects();
+    // await this.importProjects();
 
     // await this.importVotes();
 
@@ -1418,6 +1419,218 @@ export default class ImportProcessor extends PrismaProcessor {
 
 
   /**
+   * Import Teams
+   */
+  async importTeams() {
+
+    this.log("Импортируем команды", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("modxsite_companies", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("Team", "target"), {
+        "target.oldID": "source.id",
+      })
+      .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      .leftJoin(target.getTableName("User", "Owner"), "Owner.oldID", "source.owner")
+      .innerJoin(source.getTableName("site_content", "resource"), function () {
+
+        this
+          .on({
+            "resource.id": "source.resource_id",
+            "resource.parent": 1015,
+          })
+
+      })
+      .whereNull("target.id")
+
+      // .whereNotNull("Owner.id")
+      // .whereNot("Owner.id", "cjodr6nytah090850o0ieoieg")
+      ;
+
+
+    query.select([
+      "source.*",
+      "source.id as oldID",
+      "User.id as createdById",
+      "resource.uri",
+      "resource.deleted",
+      "resource.published",
+      "resource.hidemenu",
+      "resource.searchable",
+      "resource.createdon",
+      "resource.editedon",
+      "Owner.id as ownerId",
+    ]);
+
+    // query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} команд`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeTeam.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeTeam(object) {
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    let {
+      id,
+      oldID,
+      name,
+      longtitle,
+      createdon,
+      editedon,
+      createdById,
+      ownerId,
+      uri,
+      published,
+      deleted,
+      hidemenu,
+      searchable,
+      content: text,
+      class_key,
+      template,
+      status,
+      address,
+      website,
+      email,
+      phone,
+    } = object;
+
+    let type = "Team";
+
+    createdById = ownerId || createdById;
+
+    let {
+      content,
+      contentText,
+    } = this.getContent(text) || {};
+
+    uri = this.prepareUri(uri);
+
+
+    website = website && website.trim() || null;
+
+    if(website && !website.match(/^http.*?:\/\//)){
+      website = `http://${website}`;
+    }
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createTeam({
+      data: {
+        oldID,
+        name,
+        status: status === 1 ? "Active" : "Inactive",
+        address: address && address.trim() || null,
+        website,
+        email: email && email.trim() || null,
+        phone: phone && phone.trim() || null,
+        CreatedBy: {
+          connect: {
+            id: createdById,
+          },
+        },
+        Resource: {
+          create: {
+            type,
+            uri,
+            name,
+            longtitle,
+            class_key,
+            template,
+            content,
+            contentText,
+            published: published === 1,
+            deleted: deleted === 1,
+            hidemenu: hidemenu === 1,
+            searchable: searchable === 1,
+            CreatedBy: {
+              connect: {
+                id: createdById,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const {
+      id: objectId,
+    } = result;
+
+    /**
+     * Если пользователь был сохранен, надо обновить дату его создания
+     */
+    let createdAt = createdon ? new Date(createdon * 1000) : undefined;
+    let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
+
+
+    const query = target.getQuery("Team")
+
+    await query.update({
+      createdAt,
+      updatedAt,
+    })
+      .where({
+        id: objectId,
+      })
+      .then();
+
+    // console.log(chalk.green("update query SQL"), query.toString());
+
+    return result;
+  }
+
+  /**
+   * Eof Import Teams
+   */
+
+
+  /**
    * Import Services
    */
   async importServices() {
@@ -1711,7 +1924,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     let url = name;
 
-    if(!url.match(/^http.*?:\/\//)){
+    if (!url.match(/^http.*?:\/\//)) {
       url = `http://${url}`;
     }
 

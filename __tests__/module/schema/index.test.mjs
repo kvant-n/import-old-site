@@ -153,6 +153,25 @@ const requiredTypes = [
     },
   },
   {
+    name: "Team",
+    fields: {
+      both: [
+        "id",
+        "oldID",
+        "Resource",
+        "status",
+        "address",
+        "website",
+        "email",
+        "phone",
+      ],
+      prisma: [
+      ],
+      api: [
+      ],
+    },
+  },
+  {
     name: "File",
     fields: {
       both: [

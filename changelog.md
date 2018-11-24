@@ -1,6 +1,8 @@
 1.3.0
 ===============================
+- Added import Teams
 - Added import Services
+- Added import Projects
 
 1.2.4
 ===============================
