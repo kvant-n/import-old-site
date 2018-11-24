@@ -281,15 +281,15 @@ export default class ImportProcessor extends PrismaProcessor {
 
     await this.initDB(args);
 
-    // await this.importUsers();
-    // await this.importBlogs();
-    // await this.importTopics();
-    // await this.importComments();
-    // await this.importTags();
-    // await this.importNotificationTypes();
+    await this.importUsers();
+    await this.importBlogs();
+    await this.importTopics();
+    await this.importComments();
+    await this.importTags();
+    await this.importNotificationTypes();
 
-    // await this.importTeams();
-    // await this.importServices();
+    await this.importTeams();
+    await this.importServices();
     await this.importProjects();
 
     // await this.importVotes();
