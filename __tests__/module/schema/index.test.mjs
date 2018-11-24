@@ -83,6 +83,9 @@ const requiredTypes = [
         "Tags",
         "class_key",
         "template",
+        "Project",
+        "Image",
+        // "Gallery",
       ],
       prisma: [
       ],
@@ -110,8 +113,23 @@ const requiredTypes = [
       both: [
         "id",
         "oldID",
-        "image",
+        "Image",
         "Resource",
+      ],
+      prisma: [
+      ],
+      api: [
+      ],
+    },
+  },
+  {
+    name: "ProjectMember",
+    fields: {
+      both: [
+        "id",
+        "User",
+        "Project",
+        "Services",
       ],
       prisma: [
       ],
@@ -126,6 +144,20 @@ const requiredTypes = [
         "id",
         "oldID",
         "Resource",
+        "Projects",
+      ],
+      prisma: [
+      ],
+      api: [
+      ],
+    },
+  },
+  {
+    name: "File",
+    fields: {
+      both: [
+        "id",
+        "ImageResource",
       ],
       prisma: [
       ],

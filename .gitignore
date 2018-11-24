@@ -4,5 +4,6 @@
 /lib
 /node_modules
 /umd
+/uploads
 *.log*
 *.lock

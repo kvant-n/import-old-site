@@ -16,6 +16,13 @@ import Draft from "draft-js";
 
 import jsdom from 'jsdom';
 
+import fs from "fs";
+import path from "path";
+import mime from "mime";
+
+// import URI from "urijs";
+import punycode from "punycode";
+
 const { JSDOM } = jsdom;
 
 
@@ -281,8 +288,8 @@ export default class ImportProcessor extends PrismaProcessor {
     // await this.importTags();
     // await this.importNotificationTypes();
 
-    await this.importServices();
-    // await this.importProjects();
+    // await this.importServices();
+    await this.importProjects();
 
     // await this.importVotes();
 
@@ -1568,7 +1575,7 @@ export default class ImportProcessor extends PrismaProcessor {
     let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
 
 
-    const query = target.getQuery("Resource")
+    const query = target.getQuery("Service")
 
     await query.update({
       createdAt,
@@ -1612,22 +1619,29 @@ export default class ImportProcessor extends PrismaProcessor {
       ;
 
     query
-      .leftJoin(target.getTableName("Resource", "target"), {
+      .leftJoin(target.getTableName("Project", "target"), {
         "target.oldID": "source.id",
-        "target.template": 29,
+        // "target.template": 29,
       })
       .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      .leftJoin(source.getTableName("site_tmplvar_contentvalues", "tv_image"), function () {
+        this
+          .on("tv_image.tmplvarid", 3)
+          .on("tv_image.contentid", "source.id")
+          .on(knex.raw(`tv_image.value > ''`))
+          ;
+      })
       .where("source.parent", 1443)
       .whereNull("target.id")
       ;
 
-
     query.select([
       "source.*",
       "User.id as createdById",
+      "tv_image.value as image",
     ]);
 
-    query.limit(1);
+    // query.limit(1);
 
 
     // console.log(chalk.green("query SQL"), query.toString());
@@ -1640,7 +1654,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     await this.log(`Было получено ${objects && objects.length} проектов`, "Info");
 
-    return;
+    // return;
 
     const processor = this.getProcessor(objects, this.writeProject.bind(this));
 
@@ -1655,12 +1669,8 @@ export default class ImportProcessor extends PrismaProcessor {
 
   async writeProject(object) {
 
-    // console.log(chalk.green("writeProject object"), object);
-    // throw new Error("writeTopic error test");
-
     const {
       ctx,
-      source,
       target,
     } = this
 
@@ -1670,39 +1680,159 @@ export default class ImportProcessor extends PrismaProcessor {
 
     let result;
 
-    const {
+    let {
       id: oldID,
-      type: name,
-      comment,
+      pagetitle: name,
+      longtitle,
+      createdon,
+      editedon,
+      createdby,
+      uri,
+      published,
+      deleted,
+      hidemenu,
+      searchable,
+      content: text,
+      class_key,
+      template,
+      image,
     } = object;
 
+    let type = "Project";
 
-    // Получаем пользователей с этим уведомлением
+    let {
+      content,
+      contentText,
+    } = this.getContent(text) || {};
+
+    uri = this.prepareUri(uri);
+
+    name = name.trim().replace(/^\/|\/$/g, '');
+
+    let url = name;
+
+    if(!url.match(/^http.*?:\/\//)){
+      url = `http://${url}`;
+    }
 
 
-    const query = source.getQuery("society_notice_users", "source")
+    name = punycode.toUnicode(name);
+
+    name = name.replace(/^http.*?:\/\//, '');
+
+    /**
+     * Получаем всех участников проекта
+     */
+
+    const {
+      source,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+    const membersQuery = source.getQuery("modxsite_projects_members", "source")
       ;
 
-    query
+    membersQuery
+      .where("source.project_id", oldID)
       .innerJoin(target.getTableName("User"), "User.oldID", "source.user_id")
-      .where("notice_id", oldID)
+      .innerJoin(target.getTableName("Service"), "Service.oldID", "source.service_id")
+      // .whereNull("target.id")
       ;
 
-    query.select([
-      "User.id as userId",
+
+    membersQuery.select([
+      // "source.*",
+      "source.project_id",
+      "source.user_id",
+      knex.raw("GROUP_CONCAT(service_id) as services"),
+      // "User.id as createdById",
     ]);
 
-    // query.limit(3);
+    membersQuery.groupBy(1);
+    membersQuery.groupBy(2);
 
-    // console.log(chalk.green("query SQL"), query.toString());
+    // query.limit(1);
 
 
-    const users = await query.then();
+    // console.log(chalk.green("membersQuery SQL"), membersQuery.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await membersQuery.then();
 
     // console.log("objects", objects);
 
-    await this.log(`Было получено ${users && users.length} пользователей-уведомлений`, "Info");
+    await this.log(`Было получено ${objects && objects.length} участников проекта`, "Info");
 
+    // return;
+
+    let Members = {
+      create: objects.map(n => {
+
+        const {
+          status,
+          user_id,
+          services,
+        } = n;
+
+        return {
+          status: status === 1 ? "Active" : "Invited",
+          User: {
+            connect: {
+              oldID: user_id,
+            },
+          },
+          Services: {
+            connect: services.split(",").map(service_id => {
+              return {
+                oldID: parseInt(service_id),
+              };
+            }),
+          },
+          CreatedBy: {
+            connect: {
+              oldID: createdby,
+            },
+          },
+        }
+      }),
+    }
+
+
+    let Image;
+
+    if (image && fs.existsSync(`uploads/${image}`)) {
+
+      // console.log("image", image);
+
+      const filename = path.basename(image);
+      // // console.log("image.basename", path.basename(image));
+      // // console.log("image.format", path.format(image));
+      // // console.log("image.extname", path.extname(image));
+
+      // console.log("mime", mime.getType(image));
+
+      const mimetype = mime.getType(image);
+
+      Image = {
+        create: {
+          path: image,
+          filename,
+          mimetype,
+          encoding: "7bit",
+          CreatedBy: {
+            connect: {
+              oldID: createdby,
+            },
+          },
+        },
+      }
+
+    }
+
+    // return;
 
     /**
      * Сохраняем объект
@@ -1711,22 +1841,61 @@ export default class ImportProcessor extends PrismaProcessor {
       data: {
         oldID,
         name,
-        comment,
+        url,
         CreatedBy: {
           connect: {
-            username: "Fi1osof",
+            oldID: createdby,
           },
         },
-        Users: users && users.length ? {
-          connect: users.map(({ userId }) => {
-            return {
-              id: userId,
-            }
-          }),
-        } : undefined,
+        Resource: {
+          create: {
+            type,
+            uri,
+            name,
+            longtitle,
+            class_key,
+            template,
+            content,
+            contentText,
+            published: published === 1,
+            deleted: deleted === 1,
+            hidemenu: hidemenu === 1,
+            searchable: searchable === 1,
+            Image,
+            CreatedBy: {
+              connect: {
+                oldID: createdby,
+              },
+            },
+          },
+        },
+        Members,
       },
     });
 
+    const {
+      id: objectId,
+    } = result;
+
+    /**
+     * Если пользователь был сохранен, надо обновить дату его создания
+     */
+    let createdAt = createdon ? new Date(createdon * 1000) : undefined;
+    let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
+
+
+    const query = target.getQuery("Project")
+
+    await query.update({
+      createdAt,
+      updatedAt,
+    })
+      .where({
+        id: objectId,
+      })
+      .then();
+
+    // console.log(chalk.green("update query SQL"), query.toString());
 
     return result;
   }

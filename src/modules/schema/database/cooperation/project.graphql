@@ -2,6 +2,7 @@
 
 type Project{
   oldID: Int
-  image: File
+  Image: File
   Resource: Resource @relation(name: "ProjectResource")
+  url: String
 }

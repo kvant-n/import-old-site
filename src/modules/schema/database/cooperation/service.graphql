@@ -1,6 +1,6 @@
 
 
 type Service{
-  oldID: Int
+  oldID: Int @unique
   Resource: Resource! @relation(name: "ServiceResource")
 }

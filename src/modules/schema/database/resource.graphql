@@ -5,11 +5,11 @@ type Resource {
   Topics: [Resource!]! @relation(name: "BlogTopics")
   Blog: Resource @relation(name: "BlogTopics")
   Service: Service @relation(name: "ServiceResource")
+  Project: Project @relation(name: "ProjectResource")
 
   """Будет удалено"""
   class_key: String
   """Будет удалено"""
   template: Int
 
-  Projects: [Project!]! @relation(name: "ProjectResource")
 }
