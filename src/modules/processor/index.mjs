@@ -274,12 +274,15 @@ export default class ImportProcessor extends PrismaProcessor {
 
     await this.initDB(args);
 
-    await this.importUsers();
-    await this.importBlogs();
-    await this.importTopics();
-    await this.importComments();
-    await this.importTags();
-    await this.importNotificationTypes();
+    // await this.importUsers();
+    // await this.importBlogs();
+    // await this.importTopics();
+    // await this.importComments();
+    // await this.importTags();
+    // await this.importNotificationTypes();
+
+    await this.importServices();
+    // await this.importProjects();
 
     // await this.importVotes();
 
@@ -1404,6 +1407,332 @@ export default class ImportProcessor extends PrismaProcessor {
 
   /**
    * Eof Import NotificationTypes
+   */
+
+
+  /**
+   * Import Services
+   */
+  async importServices() {
+
+    this.log("Импортируем услуги", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("site_content", "source")
+      ;
+
+    query
+      // .leftJoin(target.getTableName("Resource", "target"), function () {
+
+      //   this
+      //     .on({
+      //       "target.oldID": "source.id",
+      //     })
+      //     .on(knex.raw(`target.type = 'Service'`))
+
+      // })
+      .leftJoin(target.getTableName("Service", "target"), {
+        "target.oldID": "source.id",
+      })
+      .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      .where("source.parent", 1473)
+      .whereNull("target.id")
+      ;
+
+
+    query.select([
+      "source.*",
+      "User.id as createdById",
+    ]);
+
+    // query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} услуг`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeService.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeService(object) {
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    let {
+      id,
+      pagetitle: name,
+      longtitle,
+      createdon,
+      editedon,
+      createdby,
+      uri,
+      published,
+      deleted,
+      hidemenu,
+      searchable,
+      content: text,
+      class_key,
+      template,
+    } = object;
+
+    let type = "Service";
+
+    let {
+      content,
+      contentText,
+    } = this.getContent(text) || {};
+
+    uri = this.prepareUri(uri);
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createService({
+      data: {
+        oldID: id,
+        name,
+        CreatedBy: {
+          connect: {
+            oldID: createdby,
+          },
+        },
+        Resource: {
+          create: {
+            type,
+            uri,
+            name,
+            longtitle,
+            class_key,
+            template,
+            content,
+            contentText,
+            published: published === 1,
+            deleted: deleted === 1,
+            hidemenu: hidemenu === 1,
+            searchable: searchable === 1,
+            CreatedBy: {
+              connect: {
+                oldID: createdby,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const {
+      id: objectId,
+    } = result;
+
+    /**
+     * Если пользователь был сохранен, надо обновить дату его создания
+     */
+    let createdAt = createdon ? new Date(createdon * 1000) : undefined;
+    let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
+
+
+    const query = target.getQuery("Resource")
+
+    await query.update({
+      createdAt,
+      updatedAt,
+    })
+      .where({
+        id: objectId,
+      })
+      .then();
+
+    // console.log(chalk.green("update query SQL"), query.toString());
+
+    return result;
+  }
+
+  /**
+   * Eof Import Services
+   */
+
+
+  /**
+   * Import Projects
+   */
+  async importProjects() {
+
+    this.log("Импортируем проекты", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("site_content", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("Resource", "target"), {
+        "target.oldID": "source.id",
+        "target.template": 29,
+      })
+      .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      .where("source.parent", 1443)
+      .whereNull("target.id")
+      ;
+
+
+    query.select([
+      "source.*",
+      "User.id as createdById",
+    ]);
+
+    query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} проектов`, "Info");
+
+    return;
+
+    const processor = this.getProcessor(objects, this.writeProject.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeProject(object) {
+
+    // console.log(chalk.green("writeProject object"), object);
+    // throw new Error("writeTopic error test");
+
+    const {
+      ctx,
+      source,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    const {
+      id: oldID,
+      type: name,
+      comment,
+    } = object;
+
+
+    // Получаем пользователей с этим уведомлением
+
+
+    const query = source.getQuery("society_notice_users", "source")
+      ;
+
+    query
+      .innerJoin(target.getTableName("User"), "User.oldID", "source.user_id")
+      .where("notice_id", oldID)
+      ;
+
+    query.select([
+      "User.id as userId",
+    ]);
+
+    // query.limit(3);
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+
+    const users = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${users && users.length} пользователей-уведомлений`, "Info");
+
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createProject({
+      data: {
+        oldID,
+        name,
+        comment,
+        CreatedBy: {
+          connect: {
+            username: "Fi1osof",
+          },
+        },
+        Users: users && users.length ? {
+          connect: users.map(({ userId }) => {
+            return {
+              id: userId,
+            }
+          }),
+        } : undefined,
+      },
+    });
+
+
+    return result;
+  }
+
+  /**
+   * Eof Import Projects
    */
 
 

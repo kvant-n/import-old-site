@@ -1,0 +1,7 @@
+
+
+type Project{
+  oldID: Int
+  image: File
+  Resource: Resource @relation(name: "ProjectResource")
+}

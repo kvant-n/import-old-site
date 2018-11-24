@@ -1,0 +1,6 @@
+
+
+type Service{
+  oldID: Int
+  Resource: Resource! @relation(name: "ServiceResource")
+}

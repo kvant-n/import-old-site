@@ -104,6 +104,35 @@ const requiredTypes = [
       ],
     },
   },
+  {
+    name: "Project",
+    fields: {
+      both: [
+        "id",
+        "oldID",
+        "image",
+        "Resource",
+      ],
+      prisma: [
+      ],
+      api: [
+      ],
+    },
+  },
+  {
+    name: "Service",
+    fields: {
+      both: [
+        "id",
+        "oldID",
+        "Resource",
+      ],
+      prisma: [
+      ],
+      api: [
+      ],
+    },
+  },
 ]
 
 

@@ -9,6 +9,7 @@ import LogModule from "@prisma-cms/log-module";
 import UserModule from "@prisma-cms/user-module";
 import ResourceModule from "@prisma-cms/resource-module";
 import SocietyModule from "@prisma-cms/society-module";
+import CooperationModule from "@prisma-cms/cooperation-module";
 
 import PrismaModule from "@prisma-cms/prisma-module";
 
@@ -41,6 +42,7 @@ class Module extends PrismaModule {
       SocietyModule,
       UserModule,
       ResourceModule,
+      CooperationModule,
     ]);
 
   }

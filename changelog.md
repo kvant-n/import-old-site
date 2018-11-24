@@ -1,3 +1,7 @@
+1.3.0
+===============================
+- Added import Services
+
 1.2.4
 ===============================
 - Added importNotificationTypes
