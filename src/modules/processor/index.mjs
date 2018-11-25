@@ -1938,6 +1938,8 @@ export default class ImportProcessor extends PrismaProcessor {
 
     uri = this.prepareUri(uri);
 
+    name = longtitle && longtitle.trim() || name;
+
     name = name.trim().replace(/^\/|\/$/g, '');
 
     let url = name;
