@@ -4,6 +4,7 @@
 - Import Users
 - Import Services
 - Import Companies
+- Import CompaniesContracts
 
 1.4.0
 ===============================

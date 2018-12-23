@@ -285,7 +285,8 @@ export default class ImportProcessor extends PrismaProcessor {
     // await this.importUsers();
 
     // await this.importYleyServices();
-    await this.importTeams();
+    // await this.importTeams();
+    await this.importTeamContracts();
 
     // await this.importBlogs();
     // await this.importTopics();
@@ -1744,10 +1745,10 @@ export default class ImportProcessor extends PrismaProcessor {
 
     // query.limit(1);
 
-    query.whereNot({
-      // "auto_contract": "",
-      // "parent": 0,
-    });
+    // query.whereNot({
+    //   // "auto_contract": "",
+    //   // "parent": 0,
+    // });
 
 
     // console.log(chalk.green("query SQL"), query.toString());
@@ -1859,6 +1860,179 @@ export default class ImportProcessor extends PrismaProcessor {
 
   /**
    * Eof Import Teams
+   */
+
+  /**
+   * Import TeamContracts
+   */
+  async importTeamContracts() {
+
+    this.log("Импортируем контракты команд", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("yley_company_contracts", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("CompanyContract", "target"), {
+        "target.oldID": "source.id",
+      })
+      .innerJoin(target.getTableName("Team"), "Team.oldID", "source.company_id")
+      .innerJoin(target.getTableName("User", "Owner"), "Owner.oldID", "source.created_by")
+      // .leftJoin(target.getTableName("User", "Owner"), "Owner.oldID", "source.owner")
+      // .innerJoin(source.getTableName("site_content", "resource"), function () {
+
+      //   this
+      //     .on({
+      //       "resource.id": "source.resource_id",
+      //       "resource.parent": 1015,
+      //     })
+
+      // })
+      .whereNull("target.id")
+
+      // .whereNotNull("Owner.id")
+      // .whereNot("Owner.id", "cjodr6nytah090850o0ieoieg")
+      ;
+
+
+    query.select([
+      "source.*",
+      "source.id as oldID",
+      "Owner.id as createdById",
+      knex.raw("unix_timestamp(source.created_on) as createdon"),
+    ]);
+
+    query.orderBy("source.id");
+
+    // query.limit(1);
+
+    // query.whereNot({
+    //   // "auto_contract": "",
+    //   // "parent": 0,
+    // });
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} контрактов команд`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeTeamContract.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeTeamContract(object) {
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    let {
+      id,
+      oldID,
+      company_id,
+      number,
+      date,
+      date_till: dateTill,
+      active,
+      createdon,
+      createdById,
+    } = object;
+
+    
+    number = number && number.trim() || undefined;
+ 
+
+ 
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createCompanyContract({
+      data: {
+        type: "Rent",
+        oldID,
+        number,
+        date,
+        dateTill,
+        active: active === 1 ? true : false,
+        CreatedBy: {
+          connect: {
+            id: createdById,
+          },
+        },
+        Company: {
+          connect: {
+            oldID: company_id,
+          },
+        },
+      },
+    });
+
+
+    const {
+      id: objectId,
+    } = result;
+
+    /**
+     * Если пользователь был сохранен, надо обновить дату его создания
+     */
+    let createdAt = createdon ? new Date(createdon * 1000) : undefined;
+    // let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
+    let updatedAt = createdAt;
+
+
+    const query = target.getQuery("Project")
+
+    await query.update({
+      createdAt,
+      updatedAt,
+    })
+      .where({
+        id: objectId,
+      })
+      .then();
+
+    // console.log(chalk.green("update query SQL"), query.toString());
+
+    return result;
+  }
+
+  /**
+   * Eof Import TeamContracts
    */
 
 
