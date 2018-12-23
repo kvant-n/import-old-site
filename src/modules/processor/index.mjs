@@ -1747,10 +1747,10 @@ export default class ImportProcessor extends PrismaProcessor {
 
     query.orderBy("source.id");
 
-    query.whereNotIn("source.name", [
-      "Другое",
-      "Прочее",
-    ]);
+    // query.whereNotIn("source.name", [
+    //   "Другое",
+    //   "Прочее",
+    // ]);
 
     // query.limit(1);
 
