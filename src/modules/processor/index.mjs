@@ -281,20 +281,124 @@ export default class ImportProcessor extends PrismaProcessor {
 
     await this.initDB(args);
 
-    await this.importUsers();
-    await this.importBlogs();
-    await this.importTopics();
-    await this.importComments();
-    await this.importTags();
-    await this.importNotificationTypes();
+    await this.importUserGroups();
+    // await this.importUsers();
+    // await this.importBlogs();
+    // await this.importTopics();
+    // await this.importComments();
+    // await this.importTags();
+    // await this.importNotificationTypes();
 
-    await this.importTeams();
-    await this.importServices();
-    await this.importProjects();
+    // await this.importTeams();
+    // await this.importServices();
+    // await this.importProjects();
 
-    // await this.importVotes();
 
   }
+
+  /**
+   * Import UserGroups
+   */
+  async importUserGroups() {
+
+    this.log("Импортируем группы пользователей", "Info");
+
+    // throw new Error("Test");
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+    const targetUserGroupsTable = target.getTableName("UserGroup", "targetUserGroup");
+
+
+    const query = source.getQuery("membergroup_names", "userGroups")
+      // .innerJoin(source.getTableName("userGroup_attributes", "profile"), "profile.internalKey", "userGroups.id")
+      // .leftJoin(source.getTableName("society_userGroup_attributes"), "society_userGroup_attributes.internalKey", "userGroups.id")
+      .leftJoin(targetUserGroupsTable, "targetUserGroup.oldID", "userGroups.id")
+      ;
+
+    query.whereNull("targetUserGroup.oldID");
+
+    query.select([
+      "userGroups.*",
+      // "profile.fullname",
+      // "profile.email",
+      // "profile.photo as image",
+      // // "society_userGroup_attributes.createdon as society_userGroup_createdon",
+      // "userGroups.createdon as userGroup_createdon",
+    ]);
+
+    // query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // return;
+
+    const userGroups = await query.then();
+
+    // console.log("userGroups", userGroups);
+
+    await this.log(`Было получено ${userGroups && userGroups.length} групп пользователей`, "Info");
+
+    const processor = this.getProcessor(userGroups, this.writeUserGroup.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUserGroup result", result);
+
+    }
+
+  }
+
+
+
+  async writeUserGroup(userGroup) {
+
+
+    // console.log("writeUserGroup result this", this);
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    const {
+      id,
+      name,
+      description,
+      parent,
+    } = userGroup;
+
+    /**
+     * Сохраняем пользователя
+     */
+    result = await db.mutation.createUserGroup({
+      data: {
+        oldID: id,
+        name,
+        description,
+        parent,
+      },
+    });
+  
+
+    return result;
+  }
+
+  /**
+   * Eof Import UserGroups
+   */
+
 
   /**
    * Import Users
@@ -316,7 +420,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     const query = source.getQuery("users", "users")
       .innerJoin(source.getTableName("user_attributes", "profile"), "profile.internalKey", "users.id")
-      .leftJoin(source.getTableName("society_user_attributes"), "society_user_attributes.internalKey", "users.id")
+      // .leftJoin(source.getTableName("society_user_attributes"), "society_user_attributes.internalKey", "users.id")
       .leftJoin(targetUsersTable, "targetUser.oldID", "users.id")
       ;
 
@@ -327,11 +431,11 @@ export default class ImportProcessor extends PrismaProcessor {
       "profile.fullname",
       "profile.email",
       "profile.photo as image",
-      "society_user_attributes.createdon as society_user_createdon",
+      // "society_user_attributes.createdon as society_user_createdon",
       "users.createdon as user_createdon",
     ]);
 
-    // query.limit(1);
+    query.limit(1);
 
 
     // console.log(chalk.green("query SQL"), query.toString());

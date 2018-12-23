@@ -1,8 +1,0 @@
-
-
-type Project{
-  oldID: Int
-  Image: File
-  Resource: Resource @relation(name: "ProjectResource")
-  url: String
-}

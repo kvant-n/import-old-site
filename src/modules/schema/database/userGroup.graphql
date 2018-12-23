@@ -1,0 +1,7 @@
+
+type UserGroup {
+  id: ID! @unique
+  oldID: Int @unique
+  description: String
+  parent: Int
+}
