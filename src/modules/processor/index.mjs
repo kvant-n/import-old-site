@@ -1919,8 +1919,7 @@ export default class ImportProcessor extends PrismaProcessor {
     // query.limit(1);
 
     // query.whereNot({
-    //   // "auto_contract": "",
-    //   // "parent": 0,
+    //   "source.active": "1",
     // });
 
 
@@ -1988,7 +1987,7 @@ export default class ImportProcessor extends PrismaProcessor {
         number,
         date,
         dateTill,
-        active: active === 1 ? true : false,
+        active: active === "1" ? true : false,
         CreatedBy: {
           connect: {
             id: createdById,
