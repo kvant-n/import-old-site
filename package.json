@@ -56,10 +56,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MODX-Club/import-old-site.git"
+    "url": "git+https://github.com/kvant-n/import-old-site.git"
   },
   "bugs": {
-    "url": "https://github.com/MODX-Club/import-old-site/issues"
+    "url": "https://github.com/kvant-n/import-old-site/issues"
   },
-  "homepage": "https://github.com/MODX-Club/import-old-site#readme"
+  "homepage": "https://github.com/kvant-n/import-old-site#readme"
 }
