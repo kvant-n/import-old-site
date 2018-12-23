@@ -286,7 +286,8 @@ export default class ImportProcessor extends PrismaProcessor {
 
     // await this.importYleyServices();
     // await this.importTeams();
-    await this.importTeamContracts();
+    // await this.importTeamContracts();
+    await this.importTeamContractServices();
 
     // await this.importBlogs();
     // await this.importTopics();
@@ -1689,6 +1690,117 @@ export default class ImportProcessor extends PrismaProcessor {
 
   /**
    * Eof Import YleyServices
+   */
+
+
+  /**
+   * Import TeamContractServices
+   */
+  async importTeamContractServices() {
+
+    this.log("Импортируем связки КонтрактКомпании-Услуга", "Info");
+
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("yley_contract_services", "source")
+      ;
+
+    query
+      .innerJoin(target.getTableName("Service"), {
+        "Service.oldID": "source.service_id",
+      })
+      .innerJoin(target.getTableName("CompanyContract"), {
+        "CompanyContract.oldID": "source.contract_id",
+      })
+      // .whereNull("target.id")
+
+      ;
+
+
+    query.select([
+      "Service.id as serviceId",
+      "CompanyContract.id as contractId",
+    ]);
+
+    // query.limit(3);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} связок КонтрактКомпании-Услуга`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeTeamContractService.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeTeamContractService(object) {
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    let {
+      serviceId,
+      contractId,
+    } = object;
+
+
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.updateCompanyContract({
+      data: {
+        Services: {
+          connect: {
+            id: serviceId,
+          },
+        },
+      },
+      where: {
+        id: contractId,
+      },
+    });
+
+
+    // console.log(chalk.green("update query SQL"), query.toString());
+
+    return result;
+  }
+
+  /**
+   * Eof Import TeamContractServices
    */
 
 
