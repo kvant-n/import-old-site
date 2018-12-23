@@ -283,11 +283,12 @@ export default class ImportProcessor extends PrismaProcessor {
 
     // await this.importUserGroups();
     // await this.importUsers();
-
     // await this.importYleyServices();
     // await this.importTeams();
     // await this.importTeamContracts();
-    await this.importTeamContractServices();
+    // await this.importTeamContractServices();
+    
+    await this.importYleyJkhServices();
 
     // await this.importBlogs();
     // await this.importTopics();
@@ -1617,6 +1618,7 @@ export default class ImportProcessor extends PrismaProcessor {
     query.select([
       "source.*",
       "source.id as oldID",
+      knex.raw("'YleyService' as type"),
     ]);
 
     // query.limit(1);
@@ -1661,10 +1663,22 @@ export default class ImportProcessor extends PrismaProcessor {
     let {
       oldID,
       name,
+      type,
+      parent,
     } = object;
 
-    let type = "YleyService";
 
+    let Parent;
+
+    if (parent) {
+
+      Parent = {
+        connect: {
+          oldID: parent,
+        },
+      }
+
+    }
 
     /**
      * Сохраняем объект
@@ -1674,6 +1688,7 @@ export default class ImportProcessor extends PrismaProcessor {
         oldID,
         name,
         type,
+        Parent,
         CreatedBy: {
           connect: {
             username: "Fi1osof",
@@ -1690,6 +1705,80 @@ export default class ImportProcessor extends PrismaProcessor {
 
   /**
    * Eof Import YleyServices
+   */
+
+  /**
+   * Import YleyJkhServices
+   * 
+   * Импорт ЖКХ-услуг выполняется исключая услуги Другое и Прочее
+   */
+  async importYleyJkhServices() {
+
+    this.log("Импортируем услуги YleyJkh", "Info");
+
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("yley_jkh_category", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("Service", "target"), {
+        "target.oldID": "source.id",
+      })
+      .whereNull("target.id")
+
+      ;
+
+
+    query.select([
+      "source.*",
+      "source.id as oldID",
+      knex.raw("'JkhService' as type"),
+    ]);
+
+    query.orderBy("source.id");
+
+    query.whereNotIn("source.name", [
+      "Другое",
+      "Прочее",
+    ]);
+
+    // query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} услуг YleyJkh`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeYleyService.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+  /**
+   * Eof Import YleyJkhServices
    */
 
 
