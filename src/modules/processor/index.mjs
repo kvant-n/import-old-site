@@ -281,8 +281,8 @@ export default class ImportProcessor extends PrismaProcessor {
 
     await this.initDB(args);
 
-    await this.importUserGroups();
-    // await this.importUsers();
+    // await this.importUserGroups();
+    await this.importUsers();
     // await this.importBlogs();
     // await this.importTopics();
     // await this.importComments();
@@ -390,7 +390,7 @@ export default class ImportProcessor extends PrismaProcessor {
         parent,
       },
     });
-  
+
 
     return result;
   }
@@ -415,12 +415,14 @@ export default class ImportProcessor extends PrismaProcessor {
       ctx,
     } = this;
 
+    const knex = source.getKnex();
+
     const targetUsersTable = target.getTableName("User", "targetUser");
 
 
     const query = source.getQuery("users", "users")
       .innerJoin(source.getTableName("user_attributes", "profile"), "profile.internalKey", "users.id")
-      // .leftJoin(source.getTableName("society_user_attributes"), "society_user_attributes.internalKey", "users.id")
+      .leftJoin(source.getTableName("member_groups"), "member_groups.member", "users.id")
       .leftJoin(targetUsersTable, "targetUser.oldID", "users.id")
       ;
 
@@ -433,9 +435,20 @@ export default class ImportProcessor extends PrismaProcessor {
       "profile.photo as image",
       // "society_user_attributes.createdon as society_user_createdon",
       "users.createdon as user_createdon",
-    ]);
+    ])
+      .select(knex.raw("GROUP_CONCAT(DISTINCT member_groups.user_group) as group_ids"))
+      ;
 
-    query.limit(1);
+    query.groupBy("users.id");
+
+    query.orderBy("users.active", "DESC");
+    query.orderBy("profile.blocked", "ASC");
+
+    query.where({
+      // blocked: 1,
+    });
+
+    // query.limit(1);
 
 
     // console.log(chalk.green("query SQL"), query.toString());
@@ -447,6 +460,8 @@ export default class ImportProcessor extends PrismaProcessor {
     // console.log("users", users);
 
     await this.log(`Было получено ${users && users.length} пользователей`, "Info");
+
+    // return;
 
     const processor = this.getProcessor(users, this.writeUser.bind(this));
 
@@ -476,7 +491,7 @@ export default class ImportProcessor extends PrismaProcessor {
 
     let result;
 
-    const {
+    let {
       id,
       username,
       fullname,
@@ -484,7 +499,45 @@ export default class ImportProcessor extends PrismaProcessor {
       society_user_createdon,
       user_createdon,
       image,
+      active,
+      blocked,
+
+      group_ids,
     } = user;
+
+    active = active === 1 && blocked !== 1 ? true : false;
+
+
+    let groupIds = group_ids && group_ids.split(",").map(n => parseInt(n)) || [];
+
+    let Groups;
+
+    if (groupIds.length) {
+
+      Groups = {
+        connect: groupIds.map(oldID => ({
+          oldID,
+        })),
+      }
+
+    }
+
+
+    /**
+     * Так как некоторые емейлы не уникальные, проверяем сначала на наличие емейла.
+     * Если его нет, то назначаем основной емейл.
+     * Если есть, то назначаем oldEmail
+     */
+    let oldEmail;
+
+    if (await db.exists.User({
+      email,
+    })) {
+
+      oldEmail = email;
+      email = undefined;
+
+    }
 
     /**
      * Сохраняем пользователя
@@ -495,7 +548,10 @@ export default class ImportProcessor extends PrismaProcessor {
         username,
         fullname,
         email,
+        oldEmail,
         image,
+        Groups,
+        active,
       },
     });
 
