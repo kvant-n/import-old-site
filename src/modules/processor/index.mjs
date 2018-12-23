@@ -282,14 +282,18 @@ export default class ImportProcessor extends PrismaProcessor {
     await this.initDB(args);
 
     // await this.importUserGroups();
-    await this.importUsers();
+    // await this.importUsers();
+
+    // await this.importYleyServices();
+    await this.importTeams();
+
     // await this.importBlogs();
     // await this.importTopics();
     // await this.importComments();
     // await this.importTags();
     // await this.importNotificationTypes();
 
-    // await this.importTeams();
+    // await this.importContractServices();
     // await this.importServices();
     // await this.importProjects();
 
@@ -1579,6 +1583,115 @@ export default class ImportProcessor extends PrismaProcessor {
 
 
   /**
+   * Import YleyServices
+   */
+  async importYleyServices() {
+
+    this.log("Импортируем услуги Yley", "Info");
+
+
+    const {
+      source,
+      target,
+      ctx,
+    } = this;
+
+
+    const knex = source.getKnex();
+
+
+    const query = source.getQuery("yley_services", "source")
+      ;
+
+    query
+      .leftJoin(target.getTableName("Service", "target"), {
+        "target.oldID": "source.id",
+      })
+      .whereNull("target.id")
+
+      ;
+
+
+    query.select([
+      "source.*",
+      "source.id as oldID",
+    ]);
+
+    // query.limit(1);
+
+
+    // console.log(chalk.green("query SQL"), query.toString());
+
+    // throw new Error ("Topic error test");
+
+    const objects = await query.then();
+
+    // console.log("objects", objects);
+
+    await this.log(`Было получено ${objects && objects.length} услуг Yley`, "Info");
+
+    // return;
+
+    const processor = this.getProcessor(objects, this.writeYleyService.bind(this));
+
+    for await (const result of processor) {
+
+      // console.log("writeUser result", result);
+
+    }
+
+  }
+
+
+  async writeYleyService(object) {
+
+    const {
+      ctx,
+      target,
+    } = this
+
+    const {
+      db,
+    } = ctx;
+
+    let result;
+
+    let {
+      oldID,
+      name,
+    } = object;
+
+    let type = "YleyService";
+
+
+    /**
+     * Сохраняем объект
+     */
+    result = await db.mutation.createService({
+      data: {
+        oldID,
+        name,
+        type,
+        CreatedBy: {
+          connect: {
+            username: "Fi1osof",
+          },
+        },
+      },
+    });
+
+
+    // console.log(chalk.green("update query SQL"), query.toString());
+
+    return result;
+  }
+
+  /**
+   * Eof Import YleyServices
+   */
+
+
+  /**
    * Import Teams
    */
   async importTeams() {
@@ -1597,24 +1710,24 @@ export default class ImportProcessor extends PrismaProcessor {
     const knex = source.getKnex();
 
 
-    const query = source.getQuery("modxsite_companies", "source")
+    const query = source.getQuery("yley_company", "source")
       ;
 
     query
       .leftJoin(target.getTableName("Team", "target"), {
         "target.oldID": "source.id",
       })
-      .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
-      .leftJoin(target.getTableName("User", "Owner"), "Owner.oldID", "source.owner")
-      .innerJoin(source.getTableName("site_content", "resource"), function () {
+      // .innerJoin(target.getTableName("User"), "User.oldID", "source.createdby")
+      // .leftJoin(target.getTableName("User", "Owner"), "Owner.oldID", "source.owner")
+      // .innerJoin(source.getTableName("site_content", "resource"), function () {
 
-        this
-          .on({
-            "resource.id": "source.resource_id",
-            "resource.parent": 1015,
-          })
+      //   this
+      //     .on({
+      //       "resource.id": "source.resource_id",
+      //       "resource.parent": 1015,
+      //     })
 
-      })
+      // })
       .whereNull("target.id")
 
       // .whereNotNull("Owner.id")
@@ -1625,18 +1738,16 @@ export default class ImportProcessor extends PrismaProcessor {
     query.select([
       "source.*",
       "source.id as oldID",
-      "User.id as createdById",
-      "resource.uri",
-      "resource.deleted",
-      "resource.published",
-      "resource.hidemenu",
-      "resource.searchable",
-      "resource.createdon",
-      "resource.editedon",
-      "Owner.id as ownerId",
     ]);
 
+    query.orderBy("source.id");
+
     // query.limit(1);
+
+    query.whereNot({
+      // "auto_contract": "",
+      // "parent": 0,
+    });
 
 
     // console.log(chalk.green("query SQL"), query.toString());
@@ -1679,42 +1790,48 @@ export default class ImportProcessor extends PrismaProcessor {
       id,
       oldID,
       name,
-      longtitle,
-      createdon,
-      editedon,
-      createdById,
-      ownerId,
-      uri,
-      published,
-      deleted,
-      hidemenu,
-      searchable,
-      content: text,
-      class_key,
-      template,
       status,
-      address,
-      website,
-      email,
-      phone,
+      inn,
+      auto_contract,
+      parent,
     } = object;
 
-    let type = "Team";
-
-    createdById = ownerId || createdById;
-
-    let {
-      content,
-      contentText,
-    } = this.getContent(text) || {};
-
-    uri = this.prepareUri(uri);
+    
+    auto_contract = auto_contract && auto_contract.trim() || undefined;
 
 
-    website = website && website.trim() || null;
+    let Parent;
 
-    if (website && !website.match(/^http.*?:\/\//)) {
-      website = `http://${website}`;
+    if (parent) {
+
+      Parent = {
+        connect: {
+          oldID: parent,
+        },
+      }
+
+    }
+
+    let Contracts;
+
+
+    /**
+     * При импорте контракт на парвоку создается только один
+     */
+    if(auto_contract){
+      
+      Contracts = {
+        create: {
+          number: auto_contract,
+          type: "Parking",
+          CreatedBy: {
+            connect: {
+              username: "n.rives",
+            },
+          },
+        },
+      }
+
     }
 
     /**
@@ -1725,62 +1842,17 @@ export default class ImportProcessor extends PrismaProcessor {
         oldID,
         name,
         status: status === 1 ? "Active" : "Inactive",
-        address: address && address.trim() || null,
-        website,
-        email: email && email.trim() || null,
-        phone: phone && phone.trim() || null,
+        inn,
+        Parent,
         CreatedBy: {
           connect: {
-            id: createdById,
+            username: "n.rives",
           },
         },
-        Resource: {
-          create: {
-            type,
-            uri,
-            name,
-            longtitle,
-            class_key,
-            template,
-            content,
-            contentText,
-            published: published === 1,
-            deleted: deleted === 1,
-            hidemenu: hidemenu === 1,
-            searchable: searchable === 1,
-            CreatedBy: {
-              connect: {
-                id: createdById,
-              },
-            },
-          },
-        },
+        Contracts,
       },
     });
 
-    const {
-      id: objectId,
-    } = result;
-
-    /**
-     * Если пользователь был сохранен, надо обновить дату его создания
-     */
-    let createdAt = createdon ? new Date(createdon * 1000) : undefined;
-    let updatedAt = editedon ? new Date(editedon * 1000) : undefined;
-
-
-    const query = target.getQuery("Team")
-
-    await query.update({
-      createdAt,
-      updatedAt,
-    })
-      .where({
-        id: objectId,
-      })
-      .then();
-
-    // console.log(chalk.green("update query SQL"), query.toString());
 
     return result;
   }

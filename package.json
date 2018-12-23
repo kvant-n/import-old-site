@@ -21,6 +21,7 @@
     "@prisma-cms/resource-module": "latest",
     "@prisma-cms/society-module": "latest",
     "@prisma-cms/user-module": "latest",
+    "@prisma-cms/yley": "latest",
     "chalk": "^2.4.1",
     "draft-js": "^0.10.5",
     "jsdom": "^13.0.0",

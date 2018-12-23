@@ -11,6 +11,8 @@ import UserModule from "@prisma-cms/user-module";
 // import SocietyModule from "@prisma-cms/society-module";
 // import CooperationModule from "@prisma-cms/cooperation-module";
 
+import YleyModule from "@prisma-cms/yley/src/server/modules";
+
 import PrismaModule from "@prisma-cms/prisma-module";
 
 import MergeSchema from 'merge-graphql-schemas';
@@ -43,6 +45,7 @@ class Module extends PrismaModule {
       // SocietyModule,
       // ResourceModule,
       // CooperationModule,
+      YleyModule,
     ]);
 
   }

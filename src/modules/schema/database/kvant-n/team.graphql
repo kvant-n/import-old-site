@@ -1,0 +1,5 @@
+
+type Team {
+  id: ID! @unique
+  oldID: Int @unique
+}

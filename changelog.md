@@ -1,6 +1,9 @@
 1.4.1
 ===============================
 - Added User::oldEmail
+- Import Users
+- Import Services
+- Import Companies
 
 1.4.0
 ===============================
