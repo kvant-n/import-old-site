@@ -281,12 +281,12 @@ export default class ImportProcessor extends PrismaProcessor {
 
     await this.initDB(args);
 
-    // await this.importUserGroups();
-    // await this.importUsers();
-    // await this.importYleyServices();
-    // await this.importTeams();
-    // await this.importTeamContracts();
-    // await this.importTeamContractServices();
+    await this.importUserGroups();
+    await this.importUsers();
+    await this.importYleyServices();
+    await this.importTeams();
+    await this.importTeamContracts();
+    await this.importTeamContractServices();
     
     await this.importYleyJkhServices();
 
@@ -508,6 +508,7 @@ export default class ImportProcessor extends PrismaProcessor {
       image,
       active,
       blocked,
+      sudo,
 
       group_ids,
     } = user;
@@ -559,6 +560,7 @@ export default class ImportProcessor extends PrismaProcessor {
         image,
         Groups,
         active,
+        sudo: sudo === 1 ? true : false,
       },
     });
 

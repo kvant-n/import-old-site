@@ -1,7 +1,7 @@
 {
   "name": "@kvant-n/import-old-site",
   "description": "Importer for kvant-n.ru",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "main": "src/",
   "files": [
     "src"

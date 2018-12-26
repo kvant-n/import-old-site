@@ -5,8 +5,8 @@ import chalk from "chalk";
 
 import ImportProcessor from "./processor";
 
-import LogModule from "@prisma-cms/log-module";
-import UserModule from "@prisma-cms/user-module";
+// import LogModule from "@prisma-cms/log-module";
+// import UserModule from "@prisma-cms/user-module";
 // import ResourceModule from "@prisma-cms/resource-module";
 // import SocietyModule from "@prisma-cms/society-module";
 // import CooperationModule from "@prisma-cms/cooperation-module";
@@ -40,8 +40,8 @@ class Module extends PrismaModule {
     super(props);
 
     this.mergeModules([
-      LogModule,
-      UserModule,
+      // LogModule,
+      // UserModule,
       // SocietyModule,
       // ResourceModule,
       // CooperationModule,
@@ -76,11 +76,11 @@ class Module extends PrismaModule {
 
     let baseSchema = [];
 
-    let schemaFile = "src/schema/generated/prisma.graphql";
+    // let schemaFile = "src/schema/generated/prisma.graphql";
 
-    if (fs.existsSync(schemaFile)) {
-      baseSchema = fs.readFileSync(schemaFile, "utf-8");
-    }
+    // if (fs.existsSync(schemaFile)) {
+    //   baseSchema = fs.readFileSync(schemaFile, "utf-8");
+    // }
 
     let apiSchema = super.getApiSchema(types.concat(baseSchema), []);
 
