@@ -2026,7 +2026,7 @@ export default class ImportProcessor extends PrismaProcessor {
       
       Contracts = {
         create: {
-          number: auto_contract,
+          name: auto_contract,
           type: "Parking",
           CreatedBy: {
             connect: {
@@ -2187,7 +2187,7 @@ export default class ImportProcessor extends PrismaProcessor {
       data: {
         type: "Rent",
         oldID,
-        number,
+        name: number,
         date,
         dateTill,
         active: active === "1" ? true : false,
