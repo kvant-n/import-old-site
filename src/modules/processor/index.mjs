@@ -287,7 +287,7 @@ export default class ImportProcessor extends PrismaProcessor {
     await this.importTeams();
     await this.importTeamContracts();
     await this.importTeamContractServices();
-    
+
     await this.importYleyJkhServices();
 
     // await this.importBlogs();
@@ -1671,6 +1671,8 @@ export default class ImportProcessor extends PrismaProcessor {
 
 
     let Parent;
+    let code;
+    let rank;
 
     if (parent) {
 
@@ -1682,6 +1684,60 @@ export default class ImportProcessor extends PrismaProcessor {
 
     }
 
+
+    switch (oldID) {
+
+      // Пропуска на посетителей
+      case 1:
+
+        code = "YleyVistorPass";
+        rank = 1000;
+
+        break;
+
+      // Пропуска на внос-вынос матценностей
+      case 2:
+
+        code = "YleyMaterialPass";
+        rank = 800;
+
+        break;
+
+      // Пропуска на автомобили
+      case 3:
+
+        code = "YleyAutoPass";
+        rank = 900;
+
+        break;
+
+      // Заявки ЖКХ
+      case 4:
+
+        code = "YleyJkhOrders";
+        rank = 800;
+
+        break;
+
+      // Документооборот
+      case 5:
+
+        code = "YleyDocuments";
+        rank = 700;
+
+        break;
+
+      // Тикетная система
+      case 6:
+
+        code = "YleyChats";
+        rank = 600;
+
+        break;
+
+    }
+
+
     /**
      * Сохраняем объект
      */
@@ -1690,6 +1746,8 @@ export default class ImportProcessor extends PrismaProcessor {
         oldID,
         name,
         type,
+        code,
+        rank,
         Parent,
         CreatedBy: {
           connect: {
@@ -2000,7 +2058,7 @@ export default class ImportProcessor extends PrismaProcessor {
       parent,
     } = object;
 
-    
+
     auto_contract = auto_contract && auto_contract.trim() || undefined;
 
 
@@ -2022,8 +2080,8 @@ export default class ImportProcessor extends PrismaProcessor {
     /**
      * При импорте контракт на парвоку создается только один
      */
-    if(auto_contract){
-      
+    if (auto_contract) {
+
       Contracts = {
         create: {
           name: auto_contract,
@@ -2174,11 +2232,11 @@ export default class ImportProcessor extends PrismaProcessor {
       createdById,
     } = object;
 
-    
-    number = number && number.trim() || undefined;
- 
 
- 
+    number = number && number.trim() || undefined;
+
+
+
 
     /**
      * Сохраняем объект

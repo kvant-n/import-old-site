@@ -71,16 +71,21 @@ class Module extends PrismaModule {
   }
 
 
+
   getApiSchema(types = []) {
 
 
     let baseSchema = [];
 
-    // let schemaFile = "src/schema/generated/prisma.graphql";
+    let schemaFile = __dirname + "/../schema/generated/prisma.graphql";
 
-    // if (fs.existsSync(schemaFile)) {
-    //   baseSchema = fs.readFileSync(schemaFile, "utf-8");
-    // }
+    if (fs.existsSync(schemaFile)) {
+      baseSchema = fs.readFileSync(schemaFile, "utf-8");
+
+      baseSchema = this.cleanupApiSchema(baseSchema, [
+        // "TeamMemberCreateInput",
+      ]);
+    }
 
     let apiSchema = super.getApiSchema(types.concat(baseSchema), []);
 
