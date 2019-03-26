@@ -1,7 +1,7 @@
 {
   "name": "@kvant-n/import-old-site",
   "description": "Importer for kvant-n.ru",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "main": "src/",
   "files": [
     "src"
@@ -24,7 +24,8 @@
     "@prisma-cms/yley": "latest",
     "chalk": "^2.4.1",
     "draft-js": "^0.10.5",
-    "jsdom": "^13.0.0",
+    "graphql": "14.0.2",
+    "jsdom": "^14.0.0",
     "knex": "^0.15.2",
     "merge-graphql-schemas": "latest",
     "mime": "^2.3.1",
@@ -36,13 +37,19 @@
   },
   "devDependencies": {
     "@prisma-cms/server": "latest",
+    "@prisma-cms/sms-module": "latest",
     "expect": "^23.6.0",
     "graphql": "*",
     "mocha": "^5.2.0",
     "nodemon": "latest"
   },
   "resolutions": {
-    "graphql": "*"
+    "graphql": "14.0.2",
+    "terser": "3.14.1",
+    "react-dnd": "7.0.2",
+    "react-router": "4.3.1",
+    "react-router-dom": "4.3.1",
+    "apollo-link-dedup": "1.0.15"
   },
   "author": "Fi1osof",
   "license": "MIT",

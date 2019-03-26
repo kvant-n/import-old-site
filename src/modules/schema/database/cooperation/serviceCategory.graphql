@@ -1,4 +1,4 @@
-type Service {
+type ServiceCategory {
   id: ID! @unique
   userId: Int
 }

@@ -3,7 +3,7 @@ import fs from "fs";
 
 import chalk from "chalk";
 
-import ImportProcessor from "./processor";
+// import ImportProcessor from "./processor";
 
 // import LogModule from "@prisma-cms/log-module";
 // import UserModule from "@prisma-cms/user-module";
@@ -28,7 +28,7 @@ const { createWriteStream, unlinkSync } = fs;
 const { fileLoader, mergeTypes } = MergeSchema
 
 export {
-  ImportProcessor,
+  // ImportProcessor,
 }
 
 
@@ -84,6 +84,9 @@ class Module extends PrismaModule {
 
       baseSchema = this.cleanupApiSchema(baseSchema, [
         // "TeamMemberCreateInput",
+        "ResourceCreateInput",
+        "ProjectMemberCreateInput",
+        "TaskReactionUpdateInput",
       ]);
     }
 

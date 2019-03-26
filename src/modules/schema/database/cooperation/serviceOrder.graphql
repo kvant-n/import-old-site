@@ -1,4 +1,4 @@
-type Service {
+type ServiceOrder {
   id: ID! @unique
   userId: Int
 }
