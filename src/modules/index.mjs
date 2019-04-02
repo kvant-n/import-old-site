@@ -11,7 +11,7 @@ import chalk from "chalk";
 // import SocietyModule from "@prisma-cms/society-module";
 // import CooperationModule from "@prisma-cms/cooperation-module";
 
-import YleyModule from "@prisma-cms/yley/src/server/modules";
+// import YleyModule from "@prisma-cms/yley/src/server/modules";
 
 import PrismaModule from "@prisma-cms/prisma-module";
 
@@ -45,7 +45,7 @@ class Module extends PrismaModule {
       // SocietyModule,
       // ResourceModule,
       // CooperationModule,
-      YleyModule,
+      // YleyModule,
     ]);
 
   }
